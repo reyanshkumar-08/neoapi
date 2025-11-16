@@ -71,10 +71,6 @@ async def download_video(video: VideoURL):
     # Setup cookies - Vercel has read-only filesystem
     cookie_file = None
     
-    # Check current directory and list files
-    print(f"📂 Current directory: {os.getcwd()}")
-    print(f"📁 Files in current directory: {os.listdir('.')}")
-    
     # Try multiple cookie file locations
     cookie_locations = [
         'cookies.txt',
@@ -85,11 +81,15 @@ async def download_video(video: VideoURL):
     for location in cookie_locations:
         if os.path.exists(location):
             print(f"✅ Found cookies at: {location}")
-            # Copy to /tmp (writable on Vercel)
+            # Copy to /tmp (writable on Vercel) - read and write to avoid permission issues
             import shutil
             cookie_file = '/tmp/cookies.txt'
             try:
-                shutil.copy(location, cookie_file)
+                # Read the source file and write to tmp (avoids read-only filesystem issues)
+                with open(location, 'r') as src:
+                    content = src.read()
+                with open(cookie_file, 'w') as dst:
+                    dst.write(content)
                 print(f"🍪 Copied cookies to {cookie_file} ({os.path.getsize(cookie_file)} bytes)")
                 break
             except Exception as e:
