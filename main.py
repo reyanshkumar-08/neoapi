@@ -68,11 +68,18 @@ async def download_video(video: VideoURL):
     # Get random proxy
     proxy = get_random_proxy()
     
-    # Setup cookies - check for cookies.txt file
+    # Setup cookies - Vercel has read-only filesystem
     cookie_file = None
     if os.path.exists('cookies.txt'):
-        cookie_file = 'cookies.txt'
-        print("🍪 Using cookies from cookies.txt")
+        # Copy to /tmp (writable on Vercel)
+        import shutil
+        cookie_file = '/tmp/cookies.txt'
+        try:
+            shutil.copy('cookies.txt', cookie_file)
+            print("🍪 Using cookies from cookies.txt (copied to /tmp)")
+        except Exception as e:
+            print(f"⚠️ Could not copy cookies: {e}")
+            cookie_file = None
     else:
         print("⚠️ No cookies.txt found - downloads may be rate limited")
     
