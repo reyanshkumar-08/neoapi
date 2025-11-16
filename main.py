@@ -68,38 +68,47 @@ async def download_video(video: VideoURL):
     # Get random proxy
     proxy = get_random_proxy()
     
-    # Setup cookies - Vercel has read-only filesystem
+    # Setup cookies - Vercel has read-only filesystem, so we use environment variable
     cookie_file = None
     
-    # Try multiple cookie file locations
-    cookie_locations = [
-        'cookies.txt',
-        '/var/task/cookies.txt',
-        os.path.join(os.path.dirname(__file__), 'cookies.txt')
-    ]
+    # Try to get cookies from environment variable first
+    cookies_content = os.environ.get('YOUTUBE_COOKIES')
     
-    for location in cookie_locations:
-        if os.path.exists(location):
-            print(f"✅ Found cookies at: {location}")
-            # Copy to /tmp (writable on Vercel) - read and write to avoid permission issues
-            import shutil
-            cookie_file = '/tmp/cookies.txt'
+    if cookies_content:
+        # Write cookies from env to /tmp
+        cookie_file = '/tmp/cookies.txt'
+        try:
+            with open(cookie_file, 'w') as f:
+                f.write(cookies_content)
+            print(f"🍪 Using cookies from environment variable ({len(cookies_content)} chars)")
+        except Exception as e:
+            print(f"⚠️ Could not write cookies from env: {e}")
+            cookie_file = None
+    else:
+        # Fallback: try to read from file (works locally, not on Vercel)
+        cookie_locations = [
+            'cookies.txt',
+            '/var/task/cookies.txt',
+            os.path.join(os.path.dirname(__file__), 'cookies.txt')
+        ]
+        
+        for location in cookie_locations:
             try:
-                # Read the source file and write to tmp (avoids read-only filesystem issues)
-                with open(location, 'r') as src:
-                    content = src.read()
-                with open(cookie_file, 'w') as dst:
-                    dst.write(content)
-                print(f"🍪 Copied cookies to {cookie_file} ({os.path.getsize(cookie_file)} bytes)")
-                break
+                if os.path.exists(location):
+                    print(f"✅ Found cookies at: {location}")
+                    with open(location, 'r') as src:
+                        content = src.read()
+                    
+                    cookie_file = '/tmp/cookies.txt'
+                    with open(cookie_file, 'w') as dst:
+                        dst.write(content)
+                    print(f"🍪 Copied cookies to {cookie_file} ({len(content)} chars)")
+                    break
             except Exception as e:
-                print(f"⚠️ Could not copy cookies from {location}: {e}")
-                cookie_file = None
-        else:
-            print(f"❌ Cookies not found at: {location}")
+                print(f"⚠️ Could not read cookies from {location}: {e}")
     
     if not cookie_file:
-        print("⚠️ No cookies.txt found in any location - downloads may be rate limited")
+        print("⚠️ No cookies available - downloads may be rate limited")
     
     ydl_opts: dict[str, Any] = {
         'format': 'best[protocol^=http][ext=mp4]/best[protocol^=http]/best',
