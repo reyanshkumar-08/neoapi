@@ -68,17 +68,13 @@ async def download_video(video: VideoURL):
     # Get random proxy
     proxy = get_random_proxy()
     
-    # Setup cookies - either from file or environment variable
+    # Setup cookies - check for cookies.txt file
     cookie_file = None
     if os.path.exists('cookies.txt'):
         cookie_file = 'cookies.txt'
         print("🍪 Using cookies from cookies.txt")
-    elif os.getenv('COOKIES_CONTENT'):
-        # Write cookies from environment variable to temp file
-        cookie_file = '/tmp/cookies.txt'
-        with open(cookie_file, 'w') as f:
-            f.write(os.getenv('COOKIES_CONTENT', ''))
-        print("🍪 Using cookies from environment variable")
+    else:
+        print("⚠️ No cookies.txt found - downloads may be rate limited")
     
     ydl_opts: dict[str, Any] = {
         'format': 'best[protocol^=http][ext=mp4]/best[protocol^=http]/best',
