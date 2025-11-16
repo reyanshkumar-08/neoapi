@@ -70,18 +70,36 @@ async def download_video(video: VideoURL):
     
     # Setup cookies - Vercel has read-only filesystem
     cookie_file = None
-    if os.path.exists('cookies.txt'):
-        # Copy to /tmp (writable on Vercel)
-        import shutil
-        cookie_file = '/tmp/cookies.txt'
-        try:
-            shutil.copy('cookies.txt', cookie_file)
-            print("🍪 Using cookies from cookies.txt (copied to /tmp)")
-        except Exception as e:
-            print(f"⚠️ Could not copy cookies: {e}")
-            cookie_file = None
-    else:
-        print("⚠️ No cookies.txt found - downloads may be rate limited")
+    
+    # Check current directory and list files
+    print(f"📂 Current directory: {os.getcwd()}")
+    print(f"📁 Files in current directory: {os.listdir('.')}")
+    
+    # Try multiple cookie file locations
+    cookie_locations = [
+        'cookies.txt',
+        '/var/task/cookies.txt',
+        os.path.join(os.path.dirname(__file__), 'cookies.txt')
+    ]
+    
+    for location in cookie_locations:
+        if os.path.exists(location):
+            print(f"✅ Found cookies at: {location}")
+            # Copy to /tmp (writable on Vercel)
+            import shutil
+            cookie_file = '/tmp/cookies.txt'
+            try:
+                shutil.copy(location, cookie_file)
+                print(f"🍪 Copied cookies to {cookie_file} ({os.path.getsize(cookie_file)} bytes)")
+                break
+            except Exception as e:
+                print(f"⚠️ Could not copy cookies from {location}: {e}")
+                cookie_file = None
+        else:
+            print(f"❌ Cookies not found at: {location}")
+    
+    if not cookie_file:
+        print("⚠️ No cookies.txt found in any location - downloads may be rate limited")
     
     ydl_opts: dict[str, Any] = {
         'format': 'best[protocol^=http][ext=mp4]/best[protocol^=http]/best',
